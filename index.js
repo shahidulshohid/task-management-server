@@ -48,7 +48,8 @@ async function run() {
       const result = await taskCollection.findOne(query)
       res.send(result)
     })
-
+    
+    // single task update 
     app.patch("/tasksUpdate/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -61,13 +62,51 @@ async function run() {
       res.send(result);
         });
 
-    // delete task 
-    app.delete('/tasks/:id', async(req, res) => {
-      const id = req.params.id 
-      const query = {_id: new ObjectId(id)}
-      const result = await taskCollection.deleteOne(query)
-      res.send(result)
+    // task update 
+    app.patch('/task/:draggedTaskId', async(req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const task = req.body;
+      const option = { upsert: true };
+      const updateDoc = {
+        $set: task,
+      };
+      const result = await taskCollection.updateOne(query, updateDoc, option);
+      res.send(result);
     })
+
+    // delete task 
+    app.patch("/tasks/:id", async (req, res) => {
+      const { id } = req.params; // taskId
+      const { category } = req.body; // newCategory
+    
+      try {
+        // Find the task by id and update its category
+        const result = await taskCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { category: category } }
+        );
+    
+        // If no task found
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ message: "Task not found" });
+        }
+        
+        // delete task
+        app.delete('/tasks/:id', async(req, res) => {
+          const id = req.params.id 
+          const query = {_id:new ObjectId(id)}
+          const result = await taskCollection.deleteOne(query)
+          res.send(result)
+        })
+    
+        // Send a success response
+        res.send({ message: "Task category updated successfully" });
+      } catch (error) {
+        console.error("Error updating task:", error);
+        res.status(500).send({ message: "Error updating task" });
+      }
+    });
 
     app.post("/users", async (req, res) => {
       const task = req.body;
